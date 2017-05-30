@@ -583,11 +583,13 @@ public final class WorkflowJob extends Job<WorkflowJob,WorkflowRun> implements B
         if (perhapsCompleteBuild == null) {
             perhapsCompleteBuild = lastBuild;
         }
+        System.err.println("LastBuild: #" + perhapsCompleteBuild.getNumber());
         if (pollingBaselines == null) {
             pollingBaselines = new ConcurrentHashMap<>();
         }
         PollingResult result = PollingResult.NO_CHANGES;
         for (WorkflowRun.SCMCheckout co : perhapsCompleteBuild.checkouts(listener)) {
+            System.err.println("Checkout of build #" + perhapsCompleteBuild.getNumber() + ": " + co.pollingBaseline);
             if (!co.scm.supportsPolling()) {
                 listener.getLogger().println("polling not supported from " + co.workspace + " on " + co.node);
                 continue;
@@ -601,6 +603,7 @@ public final class WorkflowJob extends Job<WorkflowJob,WorkflowRun> implements B
                 listener.getLogger().println("no polling baseline in " + co.workspace + " on " + co.node);
                 continue;
             }
+            System.err.println("Using baseline " + pollingBaseline + " out of " + pollingBaselines);
             try {
                 FilePath workspace;
                 Launcher launcher;
@@ -628,6 +631,7 @@ public final class WorkflowJob extends Job<WorkflowJob,WorkflowRun> implements B
                 try {
                     r = co.scm.compareRemoteRevisionWith(this, launcher, workspace, listener, pollingBaseline);
                     if (r.remote != null) {
+                        System.err.println("poll(): Adding [" + key + ", " + r.remote + "] to baselines " + pollingBaselines);
                         pollingBaselines.put(key, r.remote);
                     }
                 } finally {
@@ -655,9 +659,14 @@ public final class WorkflowJob extends Job<WorkflowJob,WorkflowRun> implements B
                 }
                 SCMRevisionState existingBaseline = job.pollingBaselines.get(scm.getKey());
                 if (existingBaseline == null) {
+                    System.err.println(
+                      "onCheckout(): Adding [" + scm.getKey() + ", " + pollingBaseline + "] to baselines "
+                        + job.pollingBaselines);
                     job.pollingBaselines.put(scm.getKey(), pollingBaseline);
                 } else {
                     listener.getLogger().println("Don't add baseline " + pollingBaseline + " because it already exists: " + existingBaseline);
+                    System.err.println("Don't add baseline " + pollingBaseline + " because it already exists: " + existingBaseline);
+                    new RuntimeException("Tracing Workaround").printStackTrace();
                 }
             }
         }

@@ -653,7 +653,12 @@ public final class WorkflowJob extends Job<WorkflowJob,WorkflowRun> implements B
                 if (job.pollingBaselines == null) {
                     job.pollingBaselines = new ConcurrentHashMap<>();
                 }
-                job.pollingBaselines.put(scm.getKey(), pollingBaseline);
+                SCMRevisionState existingBaseline = job.pollingBaselines.get(scm.getKey());
+                if (existingBaseline == null) {
+                    job.pollingBaselines.put(scm.getKey(), pollingBaseline);
+                } else {
+                    listener.getLogger().println("Don't add baseline " + pollingBaseline + " because it already exists: " + existingBaseline);
+                }
             }
         }
     }

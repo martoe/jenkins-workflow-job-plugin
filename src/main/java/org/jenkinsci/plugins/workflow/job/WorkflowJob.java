@@ -752,7 +752,16 @@ public final class WorkflowJob extends Job<WorkflowJob,WorkflowRun> implements B
                 if (job.pollingBaselines == null) {
                     job.pollingBaselines = new ConcurrentHashMap<>();
                 }
-                job.pollingBaselines.put(scm.getKey(), pollingBaseline);
+                // This method is called whenever a build has finished. It adds the baseline of the finished build to the pollingBaselines.
+                // If another build has been triggered in the meantime, this would replace a newer baseline with an older one
+                // (at least when using Subversion plugin 2.7), triggering another build without any commits.
+                // As a workaround, we never replace existing baselines - seems to work so far...
+                SCMRevisionState existingBaseline = job.pollingBaselines.get(scm.getKey());
+                if (existingBaseline == null) {
+                    job.pollingBaselines.put(scm.getKey(), pollingBaseline);
+                } else {
+                    listener.getLogger().println("Don't add baseline " + pollingBaseline + " because it already exists: " + existingBaseline);
+                }
             }
         }
     }
